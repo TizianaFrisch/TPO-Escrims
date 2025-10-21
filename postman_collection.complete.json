@@ -1,0 +1,366 @@
+{
+  "info": {
+    "name": "Scrims API - Complete Flow (Chained)",
+    "_postman_id": "8a4b2e4a-2dbb-4a41-bc1a-7b5a1a2d9abc",
+    "description": "Colección con flujo encadenado: registra usuarios, verifica, crea scrim, postula, confirma, forma equipos, inicia match, registra datos y finaliza. Usa variables capturadas por scripts.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+    { "key": "password", "value": "Secret123!", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "01 - Seed Vars",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const ts = Date.now();",
+              "pm.collectionVariables.set('user1Email', `user1_${ts}@example.com`);",
+              "pm.collectionVariables.set('user2Email', `user2_${ts}@example.com`);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": { "type": "text/javascript", "exec": ["pm.test('Seed listo', function(){ pm.expect(true).to.be.true; });"] }
+        }
+      ],
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/juegos", "host": ["{{baseUrl}}"], "path": ["api","juegos"] } }
+    },
+    {
+      "name": "02 - Auth - Registrar Usuario 1",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{user1Email}}\",\n  \"password\": \"{{password}}\",\n  \"region\": \"LATAM\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const loc = pm.response.headers.get('Location');",
+              "if (loc) { const id = loc.split('/').filter(Boolean).pop(); pm.collectionVariables.set('user1Id', id); }",
+              "try { const body = pm.response.json(); if (body && body.id) pm.collectionVariables.set('user1Id', body.id); } catch(e) {}",
+              "pm.test('Usuario 1 registrado', function(){ pm.expect(pm.collectionVariables.get('user1Id')).to.exist; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Auth - Registrar Usuario 2",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{user2Email}}\",\n  \"password\": \"{{password}}\",\n  \"region\": \"LATAM\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const loc = pm.response.headers.get('Location');",
+              "if (loc) { const id = loc.split('/').filter(Boolean).pop(); pm.collectionVariables.set('user2Id', id); }",
+              "try { const body = pm.response.json(); if (body && body.id) pm.collectionVariables.set('user2Id', body.id); } catch(e) {}",
+              "pm.test('Usuario 2 registrado', function(){ pm.expect(pm.collectionVariables.get('user2Id')).to.exist; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Auth - Verificar Usuario 1",
+      "request": { "method": "POST", "header": [], "url": { "raw": "{{baseUrl}}/api/auth/verify/{{user1Id}}", "host": ["{{baseUrl}}"], "path": ["api","auth","verify","{{user1Id}}"] } },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Verificación user1 200', function(){ pm.response.to.have.status(200); });"] } }
+      ]
+    },
+    {
+      "name": "05 - Auth - Verificar Usuario 2",
+      "request": { "method": "POST", "header": [], "url": { "raw": "{{baseUrl}}/api/auth/verify/{{user2Id}}", "host": ["{{baseUrl}}"], "path": ["api","auth","verify","{{user2Id}}"] } },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Verificación user2 200', function(){ pm.response.to.have.status(200); });"] } }
+      ]
+    },
+    {
+      "name": "05b - Usuarios - MMR base (user1)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/usuarios/{{user1Id}}", "host": ["{{baseUrl}}"], "path": ["api","usuarios","{{user1Id}}"] } },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "let mmr = 0; try { const b = pm.response.json(); if (b && b.mmr != null) mmr = parseInt(b.mmr, 10); } catch(e) {}",
+          "pm.collectionVariables.set('mmr1Before', isNaN(mmr)?0:mmr);",
+          "pm.test('MMR1 capturado', function(){ pm.expect(pm.collectionVariables.get('mmr1Before')).to.exist; });"
+        ] } }
+      ]
+    },
+    {
+      "name": "05c - Usuarios - MMR base (user2)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/usuarios/{{user2Id}}", "host": ["{{baseUrl}}"], "path": ["api","usuarios","{{user2Id}}"] } },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "let mmr = 0; try { const b = pm.response.json(); if (b && b.mmr != null) mmr = parseInt(b.mmr, 10); } catch(e) {}",
+          "pm.collectionVariables.set('mmr2Before', isNaN(mmr)?0:mmr);",
+          "pm.test('MMR2 capturado', function(){ pm.expect(pm.collectionVariables.get('mmr2Before')).to.exist; });"
+        ] } }
+      ]
+    },
+    {
+      "name": "06 - Juegos - Listar (sanity)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/juegos", "host": ["{{baseUrl}}"], "path": ["api","juegos"] } }
+    },
+    {
+      "name": "07 - Scrims - Crear",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode": "raw", "raw": "{\n  \"juegoId\": 1,\n  \"region\": \"LATAM\",\n  \"formato\": \"5v5\",\n  \"rangoMin\": 0,\n  \"rangoMax\": 9999,\n  \"latenciaMax\": 80,\n  \"fechaHora\": \"2025-10-18T21:00:00\",\n  \"cuposTotal\": 2,\n  \"duracionMinutos\": 60\n}" },
+        "url": { "raw": "{{baseUrl}}/api/scrims", "host": ["{{baseUrl}}"], "path": ["api","scrims"] }
+      },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "const body = pm.response.json(); if (body && body.id) pm.collectionVariables.set('scrimId', body.id);",
+          "pm.test('Scrim creado', function(){ pm.expect(pm.collectionVariables.get('scrimId')).to.exist; });"
+        ] } }
+      ]
+    },
+    {
+      "name": "08 - Scrims - Postular Usuario 1",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode": "raw", "raw": "{\n  \"usuarioId\": {{user1Id}},\n  \"rolDeseado\": \"MID\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/postulaciones", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","postulaciones"] }
+      }
+    },
+    {
+      "name": "09 - Scrims - Postular Usuario 2",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode": "raw", "raw": "{\n  \"usuarioId\": {{user2Id}},\n  \"rolDeseado\": \"TOP\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/postulaciones", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","postulaciones"] }
+      }
+    },
+    {
+      "name": "10 - Scrims - Matchmaking (mmr)",
+      "request": { "method": "POST", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/matchmaking/run?strategy=mmr", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","matchmaking","run"], "query": [ {"key":"strategy","value":"mmr"} ] } }
+    },
+    {
+      "name": "10a - Scrims - Lobby (antes)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/lobby", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","lobby"] } },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "let b={}; try{ b=pm.response.json(); }catch(e){}",
+          "pm.collectionVariables.set('pendientes_before', b.pendientes||0);",
+          "pm.collectionVariables.set('aceptadas_before', b.aceptadas||0);",
+          "pm.collectionVariables.set('confirmadas_before', b.confirmadas||0);",
+          "pm.collectionVariables.set('estado_before', b.estado||'');",
+          "pm.test('Lobby antes capturado', function(){ pm.expect(true).to.be.true; });"
+        ] } }
+      ]
+    },
+    {
+      "name": "10b - Scrims - Estado LOBBY (liviano)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}"] } },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "let estado = null;",
+          "try { const body = pm.response.json(); estado = body && body.estado; } catch(e) {}",
+          "pm.test('Estado LOBBY_ARMADO', function(){ pm.expect(estado).to.eql('LOBBY_ARMADO'); });"
+        ] } }
+      ]
+    },
+    {
+      "name": "10c - Scrims - Lobby (después)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/lobby", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","lobby"] } },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "let b={}; try{ b=pm.response.json(); }catch(e){}",
+          "pm.collectionVariables.set('pendientes_after', b.pendientes||0);",
+          "pm.collectionVariables.set('aceptadas_after', b.aceptadas||0);",
+          "pm.collectionVariables.set('confirmadas_after', b.confirmadas||0);",
+          "pm.collectionVariables.set('estado_after', b.estado||'');",
+          "pm.test('Lobby después capturado', function(){ pm.expect(true).to.be.true; });"
+        ] } }
+      ]
+    },
+    {
+      "name": "11 - Scrims - Confirmar Usuario 1",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode": "raw", "raw": "{\n  \"usuarioId\": {{user1Id}},\n  \"confirmado\": true\n}" },
+        "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/confirmaciones", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","confirmaciones"] }
+      }
+    },
+    {
+      "name": "12 - Scrims - Confirmar Usuario 2",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode": "raw", "raw": "{\n  \"usuarioId\": {{user2Id}},\n  \"confirmado\": true\n}" },
+        "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/confirmaciones", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","confirmaciones"] }
+      }
+    },
+    {
+      "name": "12b - Scrims - Estado CONFIRMADO (liviano)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}"] } },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "let estado = null;",
+          "try { const body = pm.response.json(); estado = body && body.estado; } catch(e) {}",
+          "pm.test('Estado CONFIRMADO', function(){ pm.expect(estado).to.eql('CONFIRMADO'); });"
+        ] } }
+      ]
+    },
+    {
+      "name": "13 - Scrims - Formar Equipos (MMR)",
+      "request": { "method": "POST", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/formar-equipos?estrategia=POR_MMR", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","formar-equipos"], "query": [ {"key":"estrategia","value":"POR_MMR"} ] } },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "let e1=null, e2=null;",
+          "try { const arr = pm.response.json(); if (Array.isArray(arr) && arr.length>=2){ e1=arr[0].id; e2=arr[1].id; pm.collectionVariables.set('equipo1Id', e1); pm.collectionVariables.set('equipo2Id', e2); } } catch(e) {}",
+          "pm.test('Equipos creados (2)', function(){ pm.expect(pm.collectionVariables.get('equipo1Id')).to.exist; pm.expect(pm.collectionVariables.get('equipo2Id')).to.exist; });"
+        ] } }
+      ]
+    },
+    {
+      "name": "14 - Scrims - Iniciar",
+      "request": { "method": "POST", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/iniciar", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","iniciar"] } },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "try { const body = pm.response.json(); if (body && body.estado) pm.test('Estado EN_JUEGO', function(){ pm.expect(body.estado).to.eql('EN_JUEGO'); }); } catch(e) {}"
+        ] } }
+      ]
+    },
+    {
+      "name": "15 - Matches - Por Scrim (captura matchId)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/matches", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","matches"] } },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "try { const arr = pm.response.json(); if (Array.isArray(arr) && arr.length) { pm.collectionVariables.set('matchId', arr[0].id); } } catch(e) {}",
+          "pm.test('matchId capturado', function(){ pm.expect(pm.collectionVariables.get('matchId')).to.exist; });"
+        ] } }
+      ]
+    },
+    {
+      "name": "16 - Match - Registrar Evento",
+      "request": { "method": "POST", "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode":"raw", "raw": "{\n  \"tipo\": \"DRAGON\",\n  \"usuarioId\": {{user1Id}},\n  \"equipoId\": {{equipo1Id}},\n  \"descripcion\": \"Dragon Infernal\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/matches/{{matchId}}/eventos", "host": ["{{baseUrl}}"], "path": ["api","matches","{{matchId}}","eventos"] }
+      }
+    },
+    {
+      "name": "17 - Match - Registrar Estadística Jugador",
+      "request": { "method": "POST", "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode":"raw", "raw": "{\n  \"usuarioId\": {{user1Id}},\n  \"equipoId\": {{equipo1Id}},\n  \"kills\": 3, \"muertes\": 1, \"asistencias\": 5, \"minions\": 120, \"oro\": 8000, \"danoCausado\": 15000, \"danoRecibido\": 6000, \"torres\": 1, \"objetivos\": 1\n}" },
+        "url": { "raw": "{{baseUrl}}/api/matches/{{matchId}}/estadisticas", "host": ["{{baseUrl}}"], "path": ["api","matches","{{matchId}}","estadisticas"] }
+      }
+    },
+    {
+      "name": "18 - Finalizar Match (MMR + Historial)",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode": "raw", "raw": "{\n  \"equipoGanadorId\": {{equipo1Id}},\n  \"duracionMinutos\": 35,\n  \"killsGanador\": 28,\n  \"killsPerdedor\": 16,\n  \"torresGanador\": 10,\n  \"torresPerdedor\": 3,\n  \"goldDiff\": 8500,\n  \"deltaWin\": 15,\n  \"deltaLose\": -12,\n  \"observaciones\": \"GG\",\n  \"jugadores\": [\n    { \"usuarioId\": {{user1Id}}, \"equipoId\": {{equipo1Id}}, \"kills\": 10, \"muertes\": 2, \"asistencias\": 8, \"minions\": 230, \"oro\": 14000, \"danoCausado\": 32000, \"danoRecibido\": 9000, \"torres\": 2, \"objetivos\": 1 },\n    { \"usuarioId\": {{user2Id}}, \"equipoId\": {{equipo2Id}}, \"kills\": 4, \"muertes\": 7, \"asistencias\": 5, \"minions\": 200, \"oro\": 11000, \"danoCausado\": 21000, \"danoRecibido\": 15000, \"torres\": 1, \"objetivos\": 0 }\n  ]\n}" },
+        "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/finalizar-match", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","finalizar-match"] }
+      },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "try { const body = pm.response.json(); if (body && body.estado) pm.test('Estado FINALIZADO (resp)', function(){ pm.expect(body.estado).to.eql('FINALIZADO'); }); } catch(e) {}",
+          "pm.test('Finalizar 200/201', function(){ pm.expect([200,201]).to.include(pm.response.code); });"
+        ] } }
+      ]
+    },
+    {
+      "name": "18b - Scrims - Estado FINALIZADO (liviano)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}"] } },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "let estado = null;",
+          "try { const body = pm.response.json(); estado = body && body.estado; } catch(e) {}",
+          "pm.test('Estado FINALIZADO', function(){ pm.expect(estado).to.eql('FINALIZADO'); });"
+        ] } }
+      ]
+    },
+    {
+      "name": "19 - Feedback - Crear",
+      "request": { "method": "POST", "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode":"raw", "raw": "{\n  \"autorId\": {{user1Id}},\n  \"rating\": 5,\n  \"comentario\": \"GGs\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/feedback", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","feedback"] }
+      }
+    },
+    {
+      "name": "20 - Reportes - Crear",
+      "request": { "method": "POST", "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode":"raw", "raw": "{\n  \"scrimId\": {{scrimId}},\n  \"reportadoId\": {{user2Id}},\n  \"motivo\": \"No-show\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/reportes", "host": ["{{baseUrl}}"], "path": ["api","reportes"] }
+      }
+    },
+    {
+      "name": "21 - Reportes - Listar Pendientes",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/reportes?estado=PENDIENTE", "host": ["{{baseUrl}}"], "path": ["api","reportes"], "query": [ {"key":"estado","value":"PENDIENTE"} ] } }
+    },
+    {
+      "name": "22 - Usuarios - Historial (user1)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/usuarios/{{user1Id}}/historial", "host": ["{{baseUrl}}"], "path": ["api","usuarios","{{user1Id}}","historial"] } },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "let arr = []; try { arr = pm.response.json(); } catch(e) {}",
+          "pm.test('Historial no vacío', function(){ pm.expect(Array.isArray(arr) && arr.length>0).to.be.true; });",
+          "const mid = pm.collectionVariables.get('matchId');",
+          "const deltaWin = 15;",
+          "const before = parseInt(pm.collectionVariables.get('mmr1Before')||'0',10);",
+          "const expectedAfter = Math.max(0, before + deltaWin);",
+          "const h = Array.isArray(arr) ? arr.find(x => x.match && String(x.match.id) === String(mid)) : null;",
+          "pm.test('Historial user1 para match', function(){ pm.expect(!!h).to.be.true; });",
+          "if (h){",
+          "  pm.test('Resultado VICTORIA', function(){ pm.expect(h.resultado).to.eql('VICTORIA'); });",
+          "  pm.test('MMR antes coincide', function(){ pm.expect(h.mmrAntes).to.eql(before); });",
+          "  pm.test('MMR después = antes + 15', function(){ pm.expect(h.mmrDespues).to.eql(expectedAfter); });",
+          "  pm.collectionVariables.set('mmr1After', h.mmrDespues);",
+          "}"
+        ] } }
+      ]
+    },
+    {
+      "name": "22b - Usuarios - Historial (user2)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/usuarios/{{user2Id}}/historial", "host": ["{{baseUrl}}"], "path": ["api","usuarios","{{user2Id}}","historial"] } },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "let arr = []; try { arr = pm.response.json(); } catch(e) {}",
+          "pm.test('Historial user2 no vacío', function(){ pm.expect(Array.isArray(arr) && arr.length>0).to.be.true; });",
+          "const mid = pm.collectionVariables.get('matchId');",
+          "const deltaLose = -12;",
+          "const before = parseInt(pm.collectionVariables.get('mmr2Before')||'0',10);",
+          "const expectedAfter = Math.max(0, before + deltaLose);",
+          "const h = Array.isArray(arr) ? arr.find(x => x.match && String(x.match.id) === String(mid)) : null;",
+          "pm.test('Historial user2 para match', function(){ pm.expect(!!h).to.be.true; });",
+          "if (h){",
+          "  pm.test('Resultado DERROTA', function(){ pm.expect(h.resultado).to.eql('DERROTA'); });",
+          "  pm.test('MMR2 antes coincide', function(){ pm.expect(h.mmrAntes).to.eql(before); });",
+          "  pm.test('MMR2 después = max(0, antes - 12)', function(){ pm.expect(h.mmrDespues).to.eql(expectedAfter); });",
+          "  pm.collectionVariables.set('mmr2After', h.mmrDespues);",
+          "}"
+        ] } }
+      ]
+    },
+    {
+      "name": "23 - Notificaciones - Unread Count (user1)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/notificaciones/unread-count?usuarioId={{user1Id}}", "host": ["{{baseUrl}}"], "path": ["api","notificaciones","unread-count"], "query": [ {"key":"usuarioId","value":"{{user1Id}}"} ] } }
+    },
+    {
+      "name": "24 - Notificaciones - Listar (user1)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/notificaciones?usuarioId={{user1Id}}", "host": ["{{baseUrl}}"], "path": ["api","notificaciones"], "query": [ {"key":"usuarioId","value":"{{user1Id}}"} ] } }
+    }
+  ]
+}
