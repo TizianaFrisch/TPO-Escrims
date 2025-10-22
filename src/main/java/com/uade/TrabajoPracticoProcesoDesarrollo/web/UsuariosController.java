@@ -8,6 +8,8 @@ import com.uade.TrabajoPracticoProcesoDesarrollo.repository.HistorialUsuarioRepo
 import com.uade.TrabajoPracticoProcesoDesarrollo.repository.UsuarioRepository;
 import com.uade.TrabajoPracticoProcesoDesarrollo.web.dto.NotifPrefsRequest;
 import com.uade.TrabajoPracticoProcesoDesarrollo.web.dto.UpdateUsuarioRequest;
+import com.uade.TrabajoPracticoProcesoDesarrollo.web.dto.PerfilUsuarioDTO;
+import com.uade.TrabajoPracticoProcesoDesarrollo.service.UsuarioService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,12 +20,18 @@ public class UsuariosController {
     private final UsuarioRepository usuarioRepository;
     private final ScrimRepository scrimRepository;
     private final HistorialUsuarioRepository historialRepository;
+    private final UsuarioService usuarioService;
 
     public UsuariosController(UsuarioRepository usuarioRepository, ScrimRepository scrimRepository,
-                              HistorialUsuarioRepository historialRepository) {
+                              HistorialUsuarioRepository historialRepository, UsuarioService usuarioService) {
         this.usuarioRepository = usuarioRepository;
         this.scrimRepository = scrimRepository;
         this.historialRepository = historialRepository;
+        this.usuarioService = usuarioService;
+    }
+    @PutMapping("/{id}/perfil")
+    public Usuario editarPerfil(@PathVariable Long id, @RequestBody PerfilUsuarioDTO dto) {
+        return usuarioService.actualizarPerfil(id, dto).orElseThrow();
     }
 
     @GetMapping

@@ -7,8 +7,7 @@ Este proyecto expone endpoints para gestionar scrims y usuarios. El modelo fue e
 ## Juegos
 
 - GET /api/juegos
-  - Qué hace: Lista todos los juegos disponibles para crear scrims.
-  - Respuesta 200
+
   - Body (ejemplo):
   ```json
   [
@@ -23,27 +22,22 @@ Este proyecto expone endpoints para gestionar scrims y usuarios. El modelo fue e
   - Respuesta 200
   - Body (ejemplo):
   ```json
-  { "id": 1, "nombre": "Valorant" }
-  ```
+
 ## Auth
 
-- POST /api/auth/register
   - Qué hace: Crea un usuario nuevo y lo deja en estado de verificación PENDIENTE.
   - Body RegisterRequest
   ```json
   { "email": "alice@example.com", "password": "secret", "region": "LATAM", "username": "alice" }
-  ```
-  - Respuesta 201 Created: Usuario creado (verificación = PENDIENTE). Location: /api/usuarios/{id}
+
   - Notas:
     - username es opcional: si no se envía, se deriva automáticamente de la parte local del email.
-    - Los campos enriquecidos del usuario (mmr, rolPreferido, discordId, summoner) no se envían en el registro inicial; pueden aparecer en la respuesta con valores por defecto (ej. mmr=0) y se podrán administrar por otros endpoints en futuras iteraciones.
 
 - POST /api/auth/login
   - Qué hace: Autentica a un usuario por email (simulado, sin JWT) y retorna información básica.
   - Body LoginByEmailRequest
   ```json
   { "email": "alice@example.com", "password": "secret" }
-  ```
   - Respuesta 200
   ```json
   { "id": 1, "username": "alice", "verificacionEstado": "PENDIENTE" }

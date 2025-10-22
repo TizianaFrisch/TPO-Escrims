@@ -18,6 +18,9 @@ public class Usuario {
     private String username;
 
     @Column(nullable = false, unique = true)
+    private String nombre;
+
+    @Column(nullable = false, unique = true)
     private String email;
 
     @Column(nullable = false)
@@ -25,6 +28,16 @@ public class Usuario {
     private String passwordHash;
 
     private String region;
+
+    // Perfil editable
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Juego juegoPrincipal;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    private List<String> rolesPreferidos = new ArrayList<>();
+
+    @Column(columnDefinition = "TEXT")
+    private String disponibilidadHoraria; // formato libre: texto, JSON, etc.
 
     // Preferencias de notificación simples
     private Boolean notifyPush;
@@ -39,11 +52,17 @@ public class Usuario {
 
     // === Campos adicionales tomados del otro proyecto (opcionales) ===
     private Integer mmr;
+    // Deprecado: usar rolesPreferidos
+    @Deprecated
     private String rolPreferido;
     private String discordId;
     private String summoner;
 
     private Boolean activo = Boolean.TRUE;
+
+    // Sistema de penalizaciones
+    private Integer strikes = 0;
+    private LocalDateTime cooldownHasta;
 
     private LocalDateTime fechaRegistro;
     private LocalDateTime ultimaConexion;
@@ -75,12 +94,20 @@ public class Usuario {
     public void setId(Long id) { this.id = id; }
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
+    public String getNombre() { return nombre; }
+    public void setNombre(String nombre) { this.nombre = nombre; }
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
     public String getPasswordHash() { return passwordHash; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
     public String getRegion() { return region; }
     public void setRegion(String region) { this.region = region; }
+        public Juego getJuegoPrincipal() { return juegoPrincipal; }
+        public void setJuegoPrincipal(Juego juegoPrincipal) { this.juegoPrincipal = juegoPrincipal; }
+        public List<String> getRolesPreferidos() { return rolesPreferidos; }
+        public void setRolesPreferidos(List<String> rolesPreferidos) { this.rolesPreferidos = rolesPreferidos; }
+        public String getDisponibilidadHoraria() { return disponibilidadHoraria; }
+        public void setDisponibilidadHoraria(String disponibilidadHoraria) { this.disponibilidadHoraria = disponibilidadHoraria; }
     public Boolean getNotifyPush() { return notifyPush; }
     public void setNotifyPush(Boolean notifyPush) { this.notifyPush = notifyPush; }
     public Boolean getNotifyEmail() { return notifyEmail; }
@@ -101,6 +128,10 @@ public class Usuario {
     public void setSummoner(String summoner) { this.summoner = summoner; }
     public Boolean getActivo() { return activo; }
     public void setActivo(Boolean activo) { this.activo = activo; }
+    public Integer getStrikes() { return strikes; }
+    public void setStrikes(Integer strikes) { this.strikes = strikes; }
+    public LocalDateTime getCooldownHasta() { return cooldownHasta; }
+    public void setCooldownHasta(LocalDateTime cooldownHasta) { this.cooldownHasta = cooldownHasta; }
     public LocalDateTime getFechaRegistro() { return fechaRegistro; }
     public void setFechaRegistro(LocalDateTime fechaRegistro) { this.fechaRegistro = fechaRegistro; }
     public LocalDateTime getUltimaConexion() { return ultimaConexion; }

@@ -1,4 +1,7 @@
 package com.uade.TrabajoPracticoProcesoDesarrollo.notifications;
+import com.uade.TrabajoPracticoProcesoDesarrollo.notifications.Adapters.DiscordNotifier;
+import com.uade.TrabajoPracticoProcesoDesarrollo.notifications.Adapters.EmailNotifier;
+import com.uade.TrabajoPracticoProcesoDesarrollo.notifications.Adapters.PushNotifier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,19 +28,16 @@ public class ProdNotifierFactory implements NotifierFactory {
 
     @Override
     public Notifier createChat() {
-            return /* stub */;
             return discord;
     }
 
     @Override
     public Notifier createEmail() {
-             return /* stub */;
             return email;
     }
 
     @Override
     public Notifier createPush() {
-            return /* stub */;
             return push;
     }
 }

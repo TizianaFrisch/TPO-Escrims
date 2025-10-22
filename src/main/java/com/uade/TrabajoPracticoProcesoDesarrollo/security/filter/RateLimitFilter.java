@@ -1,4 +1,4 @@
-package com.uade.security.filter;
+package com.uade.TrabajoPracticoProcesoDesarrollo.security.filter;
 
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
@@ -19,11 +19,19 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    // Por defecto: 100 requests por minuto por “clave”
+    // Por defecto: 100 requests por ventana por "clave"
+    // Use a raw string here and parse defensively because some environments may supply a comment-like
+    // value such as "100#tokensporventana" which would fail direct int conversion.
     @Value("${app.ratelimit.capacity:100}")
+    private String capacityRaw;
+
+    // parsed numeric capacity used at runtime
     private int capacity;
 
     @Value("${app.ratelimit.periodSeconds:60}")
+    private String periodSecondsRaw;
+
+    // parsed numeric period in seconds
     private int periodSeconds;
 
     @Value("${app.ratelimit.keyStrategy:ip}") // ip | user
@@ -53,6 +61,49 @@ public class RateLimitFilter extends OncePerRequestFilter {
         Refill refill = Refill.greedy(capacity, Duration.ofSeconds(periodSeconds));
         Bandwidth limit = Bandwidth.classic(capacity, refill);
         return Bucket.builder().addLimit(limit).build();
+    }
+
+    @jakarta.annotation.PostConstruct
+    private void initParsedValues() {
+        // parse capacityRaw to integer, be tolerant to values like "100#tokensporventana" or "100 tokens"
+        if (capacityRaw == null) {
+            this.capacity = 100;
+        } else {
+            String digits = capacityRaw.strip().replaceAll("[^0-9].*$", ""); // keep leading digits only
+            if (digits.isBlank()) {
+                try {
+                    this.capacity = Integer.parseInt(capacityRaw.trim());
+                } catch (NumberFormatException ex) {
+                    this.capacity = 100;
+                }
+            } else {
+                try {
+                    this.capacity = Integer.parseInt(digits);
+                } catch (NumberFormatException ex) {
+                    this.capacity = 100;
+                }
+            }
+        }
+
+        // parse periodSecondsRaw similarly
+        if (periodSecondsRaw == null) {
+            this.periodSeconds = 60;
+        } else {
+            String digitsP = periodSecondsRaw.strip().replaceAll("[^0-9].*$", "");
+            if (digitsP.isBlank()) {
+                try {
+                    this.periodSeconds = Integer.parseInt(periodSecondsRaw.trim());
+                } catch (NumberFormatException ex) {
+                    this.periodSeconds = 60;
+                }
+            } else {
+                try {
+                    this.periodSeconds = Integer.parseInt(digitsP);
+                } catch (NumberFormatException ex) {
+                    this.periodSeconds = 60;
+                }
+            }
+        }
     }
 
     private String resolveKey(HttpServletRequest req) {

@@ -4,6 +4,7 @@ import com.uade.TrabajoPracticoProcesoDesarrollo.domain.entities.*;
 import com.uade.TrabajoPracticoProcesoDesarrollo.domain.enums.PostulacionEstado;
 import com.uade.TrabajoPracticoProcesoDesarrollo.domain.enums.Rol;
 import com.uade.TrabajoPracticoProcesoDesarrollo.domain.enums.ScrimEstado;
+import com.uade.TrabajoPracticoProcesoDesarrollo.domain.enums.MotivoReporte;
 import com.uade.TrabajoPracticoProcesoDesarrollo.web.dto.ConfirmacionRequest;
 import com.uade.TrabajoPracticoProcesoDesarrollo.web.dto.CommandRequest;
 import com.uade.TrabajoPracticoProcesoDesarrollo.web.dto.CrearScrimRequest;
@@ -388,12 +389,25 @@ public class ScrimService {
         return feedbackRepo.findByScrimId(scrimId);
     }
 
-    // Reportes
     public ReporteConducta crearReporte(CrearReporteRequest req){
         Scrim s = scrimRepo.findById(req.scrimId).orElseThrow();
         Usuario reportado = usuarioRepo.findById(req.reportadoId).orElseThrow();
         ReporteConducta r = new ReporteConducta();
-        r.setScrim(s); r.setReportado(reportado); r.setMotivo(req.motivo);
+        r.setScrim(s);
+        r.setReportado(reportado);
+        MotivoReporte motivoEnum = null;
+        if (req.motivo != null) {
+            try {
+                motivoEnum = MotivoReporte.valueOf(req.motivo);
+            } catch (IllegalArgumentException ex) {
+                // try case-insensitive match and fail with clear message if not found
+                motivoEnum = java.util.Arrays.stream(MotivoReporte.values())
+                        .filter(m -> m.name().equalsIgnoreCase(req.motivo))
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalArgumentException("Motivo invalido: " + req.motivo));
+            }
+        }
+        r.setMotivo(motivoEnum);
         return reporteRepo.save(r);
     }
 

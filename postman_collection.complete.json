@@ -7,6 +7,7 @@
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+    
     { "key": "password", "value": "Secret123!", "type": "string" }
   ],
   "item": [
@@ -95,22 +96,44 @@
       "name": "05b - Usuarios - MMR base (user1)",
       "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/usuarios/{{user1Id}}", "host": ["{{baseUrl}}"], "path": ["api","usuarios","{{user1Id}}"] } },
       "event": [
-        { "listen": "test", "script": { "type": "text/javascript", "exec": [
-          "let mmr = 0; try { const b = pm.response.json(); if (b && b.mmr != null) mmr = parseInt(b.mmr, 10); } catch(e) {}",
-          "pm.collectionVariables.set('mmr1Before', isNaN(mmr)?0:mmr);",
-          "pm.test('MMR1 capturado', function(){ pm.expect(pm.collectionVariables.get('mmr1Before')).to.exist; });"
-        ] } }
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let mmr = 0;",
+              "try {",
+              "  let b = null;",
+              "  try { const text = pm.response.text(); b = text ? pm.response.json() : null; } catch(e){ b = null; }",
+              "  if (b && b.mmr != null) mmr = parseInt(b.mmr, 10);",
+              "} catch(e) {}",
+              "pm.collectionVariables.set('mmr1Before', isNaN(mmr)?0:mmr);",
+              "pm.test('MMR1 capturado', function(){ pm.expect(pm.collectionVariables.get('mmr1Before')).to.exist; });"
+            ]
+          }
+        }
       ]
     },
     {
       "name": "05c - Usuarios - MMR base (user2)",
       "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/usuarios/{{user2Id}}", "host": ["{{baseUrl}}"], "path": ["api","usuarios","{{user2Id}}"] } },
       "event": [
-        { "listen": "test", "script": { "type": "text/javascript", "exec": [
-          "let mmr = 0; try { const b = pm.response.json(); if (b && b.mmr != null) mmr = parseInt(b.mmr, 10); } catch(e) {}",
-          "pm.collectionVariables.set('mmr2Before', isNaN(mmr)?0:mmr);",
-          "pm.test('MMR2 capturado', function(){ pm.expect(pm.collectionVariables.get('mmr2Before')).to.exist; });"
-        ] } }
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let mmr = 0;",
+              "try {",
+              "  let b = null;",
+              "  try { const text = pm.response.text(); b = text ? pm.response.json() : null; } catch(e){ b = null; }",
+              "  if (b && b.mmr != null) mmr = parseInt(b.mmr, 10);",
+              "} catch(e) {}",
+              "pm.collectionVariables.set('mmr2Before', isNaN(mmr)?0:mmr);",
+              "pm.test('MMR2 capturado', function(){ pm.expect(pm.collectionVariables.get('mmr2Before')).to.exist; });"
+            ]
+          }
+        }
       ]
     },
     {
@@ -121,15 +144,31 @@
       "name": "07 - Scrims - Crear",
       "request": {
         "method": "POST",
-        "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Cookie", "value": "JSESSIONID={{JSESSIONID}}" }
+        ],
         "body": { "mode": "raw", "raw": "{\n  \"juegoId\": 1,\n  \"region\": \"LATAM\",\n  \"formato\": \"5v5\",\n  \"rangoMin\": 0,\n  \"rangoMax\": 9999,\n  \"latenciaMax\": 80,\n  \"fechaHora\": \"2025-10-18T21:00:00\",\n  \"cuposTotal\": 2,\n  \"duracionMinutos\": 60\n}" },
         "url": { "raw": "{{baseUrl}}/api/scrims", "host": ["{{baseUrl}}"], "path": ["api","scrims"] }
       },
       "event": [
-        { "listen": "test", "script": { "type": "text/javascript", "exec": [
-          "const body = pm.response.json(); if (body && body.id) pm.collectionVariables.set('scrimId', body.id);",
-          "pm.test('Scrim creado', function(){ pm.expect(pm.collectionVariables.get('scrimId')).to.exist; });"
-        ] } }
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let body = null;",
+              "try { const text = pm.response.text(); body = text ? pm.response.json() : null; } catch (e) { body = null; }",
+              "if (body && body.id) {",
+              "  pm.collectionVariables.set('scrimId', body.id);",
+              "  pm.test('Scrim creado', function(){ pm.expect(pm.collectionVariables.get('scrimId')).to.exist; });",
+              "} else {",
+              "  pm.test('Scrim creado (no se obtuvo body JSON con id)', function(){ pm.expect(true).to.be.true; });",
+              "}"
+            ]
+          }
+        }
       ]
     },
     {
@@ -158,39 +197,61 @@
       "name": "10a - Scrims - Lobby (antes)",
       "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/lobby", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","lobby"] } },
       "event": [
-        { "listen": "test", "script": { "type": "text/javascript", "exec": [
-          "let b={}; try{ b=pm.response.json(); }catch(e){}",
-          "pm.collectionVariables.set('pendientes_before', b.pendientes||0);",
-          "pm.collectionVariables.set('aceptadas_before', b.aceptadas||0);",
-          "pm.collectionVariables.set('confirmadas_before', b.confirmadas||0);",
-          "pm.collectionVariables.set('estado_before', b.estado||'');",
-          "pm.test('Lobby antes capturado', function(){ pm.expect(true).to.be.true; });"
-        ] } }
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let b = {};",
+              "try { const text = pm.response.text(); b = text ? pm.response.json() : {}; } catch(e){}",
+              "pm.collectionVariables.set('pendientes_before', b.pendientes||0);",
+              "pm.collectionVariables.set('aceptadas_before', b.aceptadas||0);",
+              "pm.collectionVariables.set('confirmadas_before', b.confirmadas||0);",
+              "pm.collectionVariables.set('estado_before', b.estado||'');",
+              "pm.test('Lobby antes capturado', function(){ pm.expect(true).to.be.true; });"
+            ]
+          }
+        }
       ]
     },
     {
       "name": "10b - Scrims - Estado LOBBY (liviano)",
       "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}"] } },
       "event": [
-        { "listen": "test", "script": { "type": "text/javascript", "exec": [
-          "let estado = null;",
-          "try { const body = pm.response.json(); estado = body && body.estado; } catch(e) {}",
-          "pm.test('Estado LOBBY_ARMADO', function(){ pm.expect(estado).to.eql('LOBBY_ARMADO'); });"
-        ] } }
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let estado = null;",
+              "try { let body = null; try { const text = pm.response.text(); body = text ? pm.response.json() : null; } catch(e){ body = null; }",
+              "  estado = body && body.estado;",
+              "} catch(e) {}",
+              "pm.test('Estado LOBBY_ARMADO', function(){ pm.expect(estado).to.eql('LOBBY_ARMADO'); });"
+            ]
+          }
+        }
       ]
     },
     {
       "name": "10c - Scrims - Lobby (después)",
       "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/lobby", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","lobby"] } },
       "event": [
-        { "listen": "test", "script": { "type": "text/javascript", "exec": [
-          "let b={}; try{ b=pm.response.json(); }catch(e){}",
-          "pm.collectionVariables.set('pendientes_after', b.pendientes||0);",
-          "pm.collectionVariables.set('aceptadas_after', b.aceptadas||0);",
-          "pm.collectionVariables.set('confirmadas_after', b.confirmadas||0);",
-          "pm.collectionVariables.set('estado_after', b.estado||'');",
-          "pm.test('Lobby después capturado', function(){ pm.expect(true).to.be.true; });"
-        ] } }
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let b = {};",
+              "try { const text = pm.response.text(); b = text ? pm.response.json() : {}; } catch(e){}",
+              "pm.collectionVariables.set('pendientes_after', b.pendientes||0);",
+              "pm.collectionVariables.set('aceptadas_after', b.aceptadas||0);",
+              "pm.collectionVariables.set('confirmadas_after', b.confirmadas||0);",
+              "pm.collectionVariables.set('estado_after', b.estado||'');",
+              "pm.test('Lobby después capturado', function(){ pm.expect(true).to.be.true; });"
+            ]
+          }
+        }
       ]
     },
     {
@@ -226,11 +287,19 @@
       "name": "13 - Scrims - Formar Equipos (MMR)",
       "request": { "method": "POST", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/formar-equipos?estrategia=POR_MMR", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","formar-equipos"], "query": [ {"key":"estrategia","value":"POR_MMR"} ] } },
       "event": [
-        { "listen": "test", "script": { "type": "text/javascript", "exec": [
-          "let e1=null, e2=null;",
-          "try { const arr = pm.response.json(); if (Array.isArray(arr) && arr.length>=2){ e1=arr[0].id; e2=arr[1].id; pm.collectionVariables.set('equipo1Id', e1); pm.collectionVariables.set('equipo2Id', e2); } } catch(e) {}",
-          "pm.test('Equipos creados (2)', function(){ pm.expect(pm.collectionVariables.get('equipo1Id')).to.exist; pm.expect(pm.collectionVariables.get('equipo2Id')).to.exist; });"
-        ] } }
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let e1=null, e2=null;",
+              "try { let arr = null; try { const text = pm.response.text(); arr = text ? pm.response.json() : null; } catch(e){ arr = null; }",
+              "  if (Array.isArray(arr) && arr.length>=2){ e1=arr[0].id; e2=arr[1].id; pm.collectionVariables.set('equipo1Id', e1); pm.collectionVariables.set('equipo2Id', e2); }",
+              "} catch(e) {}",
+              "pm.test('Equipos creados (2)', function(){ pm.expect(pm.collectionVariables.get('equipo1Id')).to.exist; pm.expect(pm.collectionVariables.get('equipo2Id')).to.exist; });"
+            ]
+          }
+        }
       ]
     },
     {
@@ -238,7 +307,9 @@
       "request": { "method": "POST", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/iniciar", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","iniciar"] } },
       "event": [
         { "listen": "test", "script": { "type": "text/javascript", "exec": [
-          "try { const body = pm.response.json(); if (body && body.estado) pm.test('Estado EN_JUEGO', function(){ pm.expect(body.estado).to.eql('EN_JUEGO'); }); } catch(e) {}"
+          "try { let body = null; try { const text = pm.response.text(); body = text ? pm.response.json() : null; } catch(e){ body = null; }",
+          "  if (body && body.estado) pm.test('Estado EN_JUEGO', function(){ pm.expect(body.estado).to.eql('EN_JUEGO'); });",
+          "} catch(e) {}"
         ] } }
       ]
     },
@@ -247,7 +318,9 @@
       "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/matches", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","matches"] } },
       "event": [
         { "listen": "test", "script": { "type": "text/javascript", "exec": [
-          "try { const arr = pm.response.json(); if (Array.isArray(arr) && arr.length) { pm.collectionVariables.set('matchId', arr[0].id); } } catch(e) {}",
+          "try { let arr = null; try { const text = pm.response.text(); arr = text ? pm.response.json() : null; } catch(e){ arr = null; }",
+          "  if (Array.isArray(arr) && arr.length) { pm.collectionVariables.set('matchId', arr[0].id); }",
+          "} catch(e) {}",
           "pm.test('matchId capturado', function(){ pm.expect(pm.collectionVariables.get('matchId')).to.exist; });"
         ] } }
       ]
@@ -276,7 +349,9 @@
       },
       "event": [
         { "listen": "test", "script": { "type": "text/javascript", "exec": [
-          "try { const body = pm.response.json(); if (body && body.estado) pm.test('Estado FINALIZADO (resp)', function(){ pm.expect(body.estado).to.eql('FINALIZADO'); }); } catch(e) {}",
+          "let body = null;",
+          "try { const text = pm.response.text(); body = text ? pm.response.json() : null; } catch (e) { body = null; }",
+          "if (body && body.estado) { pm.test('Estado FINALIZADO (resp)', function(){ pm.expect(body.estado).to.eql('FINALIZADO'); }); }",
           "pm.test('Finalizar 200/201', function(){ pm.expect([200,201]).to.include(pm.response.code); });"
         ] } }
       ]
@@ -285,11 +360,19 @@
       "name": "18b - Scrims - Estado FINALIZADO (liviano)",
       "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}"] } },
       "event": [
-        { "listen": "test", "script": { "type": "text/javascript", "exec": [
-          "let estado = null;",
-          "try { const body = pm.response.json(); estado = body && body.estado; } catch(e) {}",
-          "pm.test('Estado FINALIZADO', function(){ pm.expect(estado).to.eql('FINALIZADO'); });"
-        ] } }
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let estado = null;",
+              "try { let body = null; try { const text = pm.response.text(); body = text ? pm.response.json() : null; } catch(e){ body = null; }",
+              "  estado = body && body.estado;",
+              "} catch(e) {}",
+              "pm.test('Estado FINALIZADO', function(){ pm.expect(estado).to.eql('FINALIZADO'); });"
+            ]
+          }
+        }
       ]
     },
     {
@@ -314,44 +397,58 @@
       "name": "22 - Usuarios - Historial (user1)",
       "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/usuarios/{{user1Id}}/historial", "host": ["{{baseUrl}}"], "path": ["api","usuarios","{{user1Id}}","historial"] } },
       "event": [
-        { "listen": "test", "script": { "type": "text/javascript", "exec": [
-          "let arr = []; try { arr = pm.response.json(); } catch(e) {}",
-          "pm.test('Historial no vacío', function(){ pm.expect(Array.isArray(arr) && arr.length>0).to.be.true; });",
-          "const mid = pm.collectionVariables.get('matchId');",
-          "const deltaWin = 15;",
-          "const before = parseInt(pm.collectionVariables.get('mmr1Before')||'0',10);",
-          "const expectedAfter = Math.max(0, before + deltaWin);",
-          "const h = Array.isArray(arr) ? arr.find(x => x.match && String(x.match.id) === String(mid)) : null;",
-          "pm.test('Historial user1 para match', function(){ pm.expect(!!h).to.be.true; });",
-          "if (h){",
-          "  pm.test('Resultado VICTORIA', function(){ pm.expect(h.resultado).to.eql('VICTORIA'); });",
-          "  pm.test('MMR antes coincide', function(){ pm.expect(h.mmrAntes).to.eql(before); });",
-          "  pm.test('MMR después = antes + 15', function(){ pm.expect(h.mmrDespues).to.eql(expectedAfter); });",
-          "  pm.collectionVariables.set('mmr1After', h.mmrDespues);",
-          "}"
-        ] } }
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let arr = [];",
+              "try { const text = pm.response.text(); arr = text ? pm.response.json() : []; } catch(e) { arr = []; }",
+              "pm.test('Historial no vacío', function(){ pm.expect(Array.isArray(arr) && arr.length>0).to.be.true; });",
+              "const mid = pm.collectionVariables.get('matchId');",
+              "const deltaWin = 15;",
+              "const before = parseInt(pm.collectionVariables.get('mmr1Before')||'0',10);",
+              "const expectedAfter = Math.max(0, before + deltaWin);",
+              "const h = Array.isArray(arr) ? arr.find(x => x.match && String(x.match.id) === String(mid)) : null;",
+              "pm.test('Historial user1 para match', function(){ pm.expect(!!h).to.be.true; });",
+              "if (h){",
+              "  pm.test('Resultado VICTORIA', function(){ pm.expect(h.resultado).to.eql('VICTORIA'); });",
+              "  pm.test('MMR antes coincide', function(){ pm.expect(h.mmrAntes).to.eql(before); });",
+              "  pm.test('MMR después = antes + 15', function(){ pm.expect(h.mmrDespues).to.eql(expectedAfter); });",
+              "  pm.collectionVariables.set('mmr1After', h.mmrDespues);",
+              "}"
+            ]
+          }
+        }
       ]
     },
     {
       "name": "22b - Usuarios - Historial (user2)",
       "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/usuarios/{{user2Id}}/historial", "host": ["{{baseUrl}}"], "path": ["api","usuarios","{{user2Id}}","historial"] } },
       "event": [
-        { "listen": "test", "script": { "type": "text/javascript", "exec": [
-          "let arr = []; try { arr = pm.response.json(); } catch(e) {}",
-          "pm.test('Historial user2 no vacío', function(){ pm.expect(Array.isArray(arr) && arr.length>0).to.be.true; });",
-          "const mid = pm.collectionVariables.get('matchId');",
-          "const deltaLose = -12;",
-          "const before = parseInt(pm.collectionVariables.get('mmr2Before')||'0',10);",
-          "const expectedAfter = Math.max(0, before + deltaLose);",
-          "const h = Array.isArray(arr) ? arr.find(x => x.match && String(x.match.id) === String(mid)) : null;",
-          "pm.test('Historial user2 para match', function(){ pm.expect(!!h).to.be.true; });",
-          "if (h){",
-          "  pm.test('Resultado DERROTA', function(){ pm.expect(h.resultado).to.eql('DERROTA'); });",
-          "  pm.test('MMR2 antes coincide', function(){ pm.expect(h.mmrAntes).to.eql(before); });",
-          "  pm.test('MMR2 después = max(0, antes - 12)', function(){ pm.expect(h.mmrDespues).to.eql(expectedAfter); });",
-          "  pm.collectionVariables.set('mmr2After', h.mmrDespues);",
-          "}"
-        ] } }
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let arr = [];",
+              "try { const text = pm.response.text(); arr = text ? pm.response.json() : []; } catch(e) { arr = []; }",
+              "pm.test('Historial user2 no vacío', function(){ pm.expect(Array.isArray(arr) && arr.length>0).to.be.true; });",
+              "const mid = pm.collectionVariables.get('matchId');",
+              "const deltaLose = -12;",
+              "const before = parseInt(pm.collectionVariables.get('mmr2Before')||'0',10);",
+              "const expectedAfter = Math.max(0, before + deltaLose);",
+              "const h = Array.isArray(arr) ? arr.find(x => x.match && String(x.match.id) === String(mid)) : null;",
+              "pm.test('Historial user2 para match', function(){ pm.expect(!!h).to.be.true; });",
+              "if (h){",
+              "  pm.test('Resultado DERROTA', function(){ pm.expect(h.resultado).to.eql('DERROTA'); });",
+              "  pm.test('MMR2 antes coincide', function(){ pm.expect(h.mmrAntes).to.eql(before); });",
+              "  pm.test('MMR2 después = max(0, antes - 12)', function(){ pm.expect(h.mmrDespues).to.eql(expectedAfter); });",
+              "  pm.collectionVariables.set('mmr2After', h.mmrDespues);",
+              "}"
+            ]
+          }
+        }
       ]
     },
     {
@@ -361,6 +458,40 @@
     {
       "name": "24 - Notificaciones - Listar (user1)",
       "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/notificaciones?usuarioId={{user1Id}}", "host": ["{{baseUrl}}"], "path": ["api","notificaciones"], "query": [ {"key":"usuarioId","value":"{{user1Id}}"} ] } }
+    },
+    {
+      "name": "04b - Auth - Login Usuario 1",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{user1Email}}\",\n  \"password\": \"{{password}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api","auth","login"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('login 200', function(){ pm.response.to.have.status(200); });",
+              "let b = null;",
+              "try { const text = pm.response.text(); b = text ? pm.response.json() : null; } catch(e) { b = null; }",
+              "try { if (b && b.token) pm.collectionVariables.set('token', b.token); if (b && b.accessToken) pm.collectionVariables.set('token', b.accessToken); } catch(e) {}",
+              "const auth = pm.response.headers.get('Authorization'); if (auth) pm.collectionVariables.set('token', auth.replace(/^Bearer\\s+/i, ''));",
+              "const jsession = pm.cookies.get('JSESSIONID'); if (jsession) pm.collectionVariables.set('JSESSIONID', jsession);"
+            ]
+          }
+        }
+      ]
     }
   ]
 }

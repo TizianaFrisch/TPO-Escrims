@@ -1,10 +1,16 @@
 package com.uade.TrabajoPracticoProcesoDesarrollo.domain.entities;
 
 import com.uade.TrabajoPracticoProcesoDesarrollo.domain.enums.EstadoReporte;
+import com.uade.TrabajoPracticoProcesoDesarrollo.domain.enums.MotivoReporte;
 import jakarta.persistence.*;
 
 @Entity
 public class ReporteConducta {
+    // Compatibilidad con lógica de moderación
+    public boolean getResuelto() { return estado == EstadoReporte.APROBADO || estado == EstadoReporte.RECHAZADO; }
+    public void setResuelto(boolean resuelto) { this.estado = resuelto ? EstadoReporte.APROBADO : EstadoReporte.PENDIENTE; }
+    public String getResolucion() { return sancion; }
+    public void setResolucion(String resolucion) { this.sancion = resolucion; }
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -15,7 +21,8 @@ public class ReporteConducta {
     @ManyToOne(optional = false)
     private Usuario reportado;
 
-    private String motivo;
+    @Enumerated(EnumType.STRING)
+    private MotivoReporte motivo;
 
     @Enumerated(EnumType.STRING)
     private EstadoReporte estado = EstadoReporte.PENDIENTE;
@@ -28,8 +35,8 @@ public class ReporteConducta {
     public void setScrim(Scrim scrim) { this.scrim = scrim; }
     public Usuario getReportado() { return reportado; }
     public void setReportado(Usuario reportado) { this.reportado = reportado; }
-    public String getMotivo() { return motivo; }
-    public void setMotivo(String motivo) { this.motivo = motivo; }
+    public MotivoReporte getMotivo() { return motivo; }
+    public void setMotivo(MotivoReporte motivo) { this.motivo = motivo; }
     public EstadoReporte getEstado() { return estado; }
     public void setEstado(EstadoReporte estado) { this.estado = estado; }
     public String getSancion() { return sancion; }

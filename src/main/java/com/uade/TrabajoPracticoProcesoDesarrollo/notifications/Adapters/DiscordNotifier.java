@@ -1,7 +1,6 @@
-package com.uade...notifications.adapters;
+package com.uade.TrabajoPracticoProcesoDesarrollo.notifications.Adapters;
 
-import com.uade...notifications.Notificacion;
-import com.uade...notifications.Notifier;
+import com.uade.TrabajoPracticoProcesoDesarrollo.notifications.Notifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -20,9 +19,11 @@ public class DiscordNotifier implements Notifier {
     }
 
     @Override
-    public void send(Notificacion n) {
+    public void send(String to, String message) {
         if (webhookUrl == null || webhookUrl.isBlank()) return; // soft-fail
-        var payload = Map.of("content", ":video_game: **" + n.getTipo() + "** — " + n.getPayloadResumen());
+        // Si to se usa como tipo, lo incluimos en el mensaje
+        var content = ":video_game: **" + to + "** — " + message;
+        var payload = Map.of("content", content);
         client.post()
                 .uri(webhookUrl)
                 .contentType(MediaType.APPLICATION_JSON)

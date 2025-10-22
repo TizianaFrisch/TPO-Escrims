@@ -94,7 +94,11 @@ public class BusquedaFavorita {
     private Integer rangoMin;
     private Integer rangoMax;
     private Boolean alertasActivas;
-}
+~~### 5. Búsquedas Favoritas y Alertas~~ ✅ **IMPLEMENTADO**
+**Estado actual**: ✅ **Implementado**
+- Entidad `BusquedaFavorita` creada
+- Servicio y repositorio implementados
+- Lógica de notificación lista para integración con scrim
 
 // Al crear un scrim, verificar si coincide con búsquedas favoritas
 // Enviar notificación (Observer) a usuarios con alertas activas
@@ -113,7 +117,10 @@ public class BusquedaFavorita {
 // 📍 Agregar a Usuario.java
 private Integer strikes = 0;
 private LocalDateTime cooldownHasta;
-
+~~### 6. Sistema de Strikes y Cooldown~~ ✅ **IMPLEMENTADO**
+**Estado actual**: ✅ **Implementado**
+- Strikes y cooldown agregados a `Usuario`
+- Lógica de penalización y bloqueo de postulación implementada
 // Lógica:
 // - Abandono/no-show → incrementar strikes
 // - 3+ strikes → cooldown de X días
@@ -135,36 +142,21 @@ private LocalDateTime cooldownHasta;
 
 **Nota**: La consigna marca esto como "opcional", pero suma puntos.
 
----
+~~### 10. Logs de Auditoría~~ ✅ **IMPLEMENTADO**
+**Estado actual**: ✅ **Implementado**
+- Entidad `LogAuditoria` creada
+- Servicio y repositorio implementados
+- Auditoría de cambios y moderación activa
 
 ## 🔒 SEGURIDAD Y NO FUNCIONALES FALTANTES
-
-### ~~8. Seguridad Robusta~~ ⚠️ **PARCIALMENTE IMPLEMENTADO**
-
-**Ya implementado**:
-- ✅ **BCrypt**: `BCryptPasswordEncoder` configurado en `SecurityConfig.java`
-- ✅ **Spring Security**: `@EnableWebSecurity` activo
+~~- ⚠️ Moderación (reportes ok, falta strikes/cooldown automático)~~ ✅ **COMPLETO**
+~~- ⚠️ Búsquedas favoritas y alertas~~ ✅ **COMPLETO**
+~~- ⚠️ Logs de auditoría~~ ✅ **COMPLETO**
 - ✅ **SecurityConfig**: Configuración básica (endpoints abiertos para desarrollo)
 
-**Falta implementar**:
-- ❌ **Roles activos**: Aplicar `@PreAuthorize("hasRole('ADMIN')")` en endpoints sensibles
-- ❌ **Rate Limiting**: Usar Bucket4j o similar para limitar requests por usuario
-- ❌ **CORS/CSRF**: Configuración productiva
-
-**Impacto**: Consigna exige roles (USER/MOD/ADMIN) activos y rate limiting.
-
----
-
-### 9. Colas para Notificaciones
-
-**Estado actual**: No implementado (consigna permite "simulado")  
-**Falta implementar (opcional pero recomendado)**:
-
-- RabbitMQ o Kafka para encolar notificaciones
-- Evitar bloqueo del thread principal al enviar notificaciones
-- Reintentos exponenciales si falla envío
-
-**Impacto**: Mejora escalabilidad (req. no funcional).
+~~- ❌ Búsquedas favoritas y alertas automáticas~~ ✅ **COMPLETO**
+~~- ❌ Sistema de strikes/cooldown~~ ✅ **COMPLETO**
+~~- ❌ Logs de auditoría~~ ✅ **COMPLETO**
 
 ---
 
@@ -342,31 +334,28 @@ HU4: Como moderador, quiero procesar reportes con un flujo escalonado.
 12. ✅ Persistencia JPA (H2/MySQL)
 13. ✅ Tests básicos (9 suites)
 14. ✅ Postman E2E con asserts
+15. ✅ Moderación (strikes/cooldown, reportes, penalización)
+16. ✅ Búsquedas favoritas y alertas automáticas
+17. ✅ Logs de auditoría
+18. ✅ Tests para ByLatencyStrategy y ByHistoryStrategy
+19. ✅ Perfil completo (juego principal, roles, disponibilidad)
 
 ### ⚠️ Lo que está PARCIAL:
 1. ⚠️ Notificaciones (persistencia ok, faltan integraciones reales Discord/Email/Push)
 2. ⚠️ Seguridad (BCrypt ok, faltan roles activos + OAuth2 + rate limiting)
-3. ⚠️ Perfil usuario (solo región editable, faltan juego/roles/disponibilidad)
-4. ⚠️ Moderación (reportes ok, falta strikes/cooldown automático)
-5. ⚠️ Testing (9 suites ok, falta cobertura amplia y tests para Latency/History)
 
 ### ❌ Lo que FALTA completamente:
 1. ❌ Discord/Email/Push integraciones reales (tenemos stubs)
-2. ❌ Búsquedas favoritas y alertas automáticas
-3. ❌ Sistema de strikes/cooldown
-4. ❌ OAuth2 (Discord/Steam/Riot)
-5. ❌ Perfil completo (juego principal, roles, disponibilidad)
-6. ❌ Roles activos con @PreAuthorize
-7. ❌ Rate limiting (Bucket4j)
-8. ❌ Colas de notificaciones (RabbitMQ/Kafka) - opcional
-9. ❌ Logs de auditoría
-10. ❌ Pruebas de carga (500 candidatos < 2s)
-11. ❌ Tests para ByLatencyStrategy y ByHistoryStrategy
-12. ❌ Diagrama UML de clases
-13. ❌ Diagrama de estados visual
-14. ❌ Casos de uso documentados
-15. ❌ Historias de usuario documentadas
-16. ❌ Video demo
+2. ❌ OAuth2 (Discord/Steam/Riot)
+4. ❌ Roles activos con @PreAuthorize
+5. ❌ Rate limiting (Bucket4j)
+6. ❌ Colas de notificaciones (RabbitMQ/Kafka) - opcional
+7. ❌ Pruebas de carga (500 candidatos < 2s)
+9. ❌ Diagrama UML de clases
+10. ❌ Diagrama de estados visual
+11. ❌ Casos de uso documentados
+12. ❌ Historias de usuario documentadas
+13. ❌ Video demo
 
 ---
 

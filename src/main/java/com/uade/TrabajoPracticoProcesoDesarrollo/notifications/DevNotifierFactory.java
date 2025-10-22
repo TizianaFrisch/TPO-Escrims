@@ -12,9 +12,9 @@ public class DevNotifierFactory implements NotifierFactory {
     private static class ConsoleNotifier implements Notifier {
         private final String channel;
         ConsoleNotifier(String channel){ this.channel = channel; }
-        @Override public void send(String to, String message) {
+        @Override public void send(String destinoEmail, String payloadTextoPlano) {
             // In dev, just log to console
-            log.info("[{}] -> {} :: {}", channel, to, message);
+            log.info("[{}] -> {} :: {}", channel, destinoEmail, payloadTextoPlano);
         }
     }
 
@@ -22,8 +22,8 @@ public class DevNotifierFactory implements NotifierFactory {
     private static class LoggingNotifier implements Notifier {
         private final String channel;
         LoggingNotifier(String channel){ this.channel = channel; }
-        @Override public void send(Notificacion n) {
-            System.out.println("[DEV " + channel + "] " + n.getTipo() + " :: " + n.getPayloadResumen());
+        @Override public void send(String destinoEmail, String payloadTextoPlano) {
+            System.out.println("[DEV " + channel + "] -> " + destinoEmail + " :: " + payloadTextoPlano);
         }
     }
 

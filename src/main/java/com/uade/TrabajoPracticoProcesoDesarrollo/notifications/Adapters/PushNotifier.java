@@ -1,12 +1,14 @@
-package com.uade...notifications.adapters;
+package com.uade.TrabajoPracticoProcesoDesarrollo.notifications.Adapters;
 
-import com.uade...notifications.Notificacion;
-import com.uade...notifications.Notifier;
+
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import java.util.Map;
+
+import com.uade.TrabajoPracticoProcesoDesarrollo.notifications.Notifier;
 
 @Component
 public class PushNotifier implements Notifier {
@@ -16,8 +18,8 @@ public class PushNotifier implements Notifier {
     private String serverKey;
 
     @Override
-    public void send(Notificacion n) {
-        if (n.getDestinoPushToken() == null || n.getDestinoPushToken().isBlank()) return;
+    public void send(String to, String message) {
+        if (to == null || to.isBlank()) return;
         if (serverKey == null || serverKey.isBlank()) return;
 
         var url = "https://fcm.googleapis.com/fcm/send"; // Legacy (fácil y suficiente para el TPO)
@@ -25,13 +27,13 @@ public class PushNotifier implements Notifier {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "key=" + serverKey);
 
-        var body = Map.of(
-                "to", n.getDestinoPushToken(),
-                "notification", Map.of(
-                        "title", "eScrims: " + n.getTipo(),
-                        "body", n.getPayloadResumen()
-                )
-        );
+    var body = Map.of(
+        "to", to,
+        "notification", Map.of(
+            "title", "eScrims: " + to,
+            "body", message
+        )
+    );
 
         try {
             rest.postForEntity(url, new HttpEntity<>(body, headers), String.class);

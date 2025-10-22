@@ -1,13 +1,14 @@
-package com.uade...notifications.adapters;
+package com.uade.TrabajoPracticoProcesoDesarrollo.notifications.Adapters;
 
-import com.uade...notifications.Notificacion;
-import com.uade...notifications.Notifier;
+import com.uade.TrabajoPracticoProcesoDesarrollo.notifications.Notifier;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 @Component
+@ConditionalOnProperty(prefix = "app.notifications.email", name = "enabled", havingValue = "true")
 public class EmailNotifier implements Notifier {
     private final JavaMailSender mailSender;
     @Value("${spring.mail.from:eScrims@uade.com}")
@@ -18,13 +19,13 @@ public class EmailNotifier implements Notifier {
     }
 
     @Override
-    public void send(Notificacion n) {
-        if (n.getDestinoEmail() == null || n.getDestinoEmail().isBlank()) return;
+    public void send(String to, String message) {
+        if (to == null || to.isBlank()) return;
         var msg = new SimpleMailMessage();
         msg.setFrom(from);
-        msg.setTo(n.getDestinoEmail());
-        msg.setSubject("[eScrims] " + n.getTipo());
-        msg.setText(n.getPayloadTextoPlano());
+        msg.setTo(to);
+        msg.setSubject("[eScrims] " + to);
+        msg.setText(message);
         try {
             mailSender.send(msg);
         } catch (Exception ignored) { /* log + retry si querés */ }

@@ -38,8 +38,11 @@ public class AuthController {
         }
         Usuario u = new Usuario();
         u.setUsername(req.username);
+    u.setNombre(req.username);
         u.setEmail(req.email);
         u.setPasswordHash(passwordEncoder.encode(req.password));
+    // asegurarse valor por defecto para campos NOT NULL en BD
+    u.setMmr(0);
         u.setRegion(req.region);
         u.setVerificacionEstado(VerificacionEstado.PENDIENTE);
         var saved = usuarioRepository.save(u);
