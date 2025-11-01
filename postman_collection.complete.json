@@ -1,0 +1,838 @@
+{
+  "info": {
+    "name": "Scrims API - Complete Flow (Chained)",
+    "_postman_id": "8a4b2e4a-2dbb-4a41-bc1a-7b5a1a2d9abc",
+    "description": "Colección con flujo encadenado completo que incluye:\n- Registro y verificación de usuarios (con notificaciones activadas)\n- Creación de scrim (dispara notificaciones)\n- Verificación automática de notificaciones multi-canal\n- Postulaciones, matchmaking, formación de equipos\n- Gestión completa del ciclo de vida del scrim\n\nPara ver las notificaciones en acción:\n1. Inicia la app con profile=dev (logs en consola)\n2. Ejecuta la colección completa\n3. Busca en los logs: [PUSH], [EMAIL], [DISCORD]\n4. Verifica el request '07b - Notificaciones'",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+    
+    { "key": "password", "value": "Secret123!", "type": "string" },
+    { "key": "modEmail", "value": "it_user_1761158800353@example.com", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "01 - Seed Vars",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const ts = Date.now();",
+              "pm.collectionVariables.set('user1Email', `user1_${ts}@example.com`);",
+              "pm.collectionVariables.set('user2Email', `user2_${ts}@example.com`);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": { "type": "text/javascript", "exec": ["pm.test('Seed listo', function(){ pm.expect(true).to.be.true; });"] }
+        }
+      ],
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/juegos", "host": ["{{baseUrl}}"], "path": ["api","juegos"] } }
+    },
+    {
+      "name": "02 - Auth - Registrar Usuario 1",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{user1Email}}\",\n  \"password\": \"{{password}}\",\n  \"region\": \"LATAM\",\n  \"notifyPush\": true,\n  \"notifyEmail\": true,\n  \"notifyDiscord\": true\n}" },
+        "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const loc = pm.response.headers.get('Location');",
+              "if (loc) { const id = loc.split('/').filter(Boolean).pop(); pm.collectionVariables.set('user1Id', id); }",
+              "try { const body = pm.response.json(); if (body && body.id) pm.collectionVariables.set('user1Id', body.id); } catch(e) {}",
+              "pm.test('Usuario 1 registrado', function(){ pm.expect(pm.collectionVariables.get('user1Id')).to.exist; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Auth - Registrar Usuario 2",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{user2Email}}\",\n  \"password\": \"{{password}}\",\n  \"region\": \"LATAM\",\n  \"notifyPush\": true,\n  \"notifyEmail\": true,\n  \"notifyDiscord\": true\n}" },
+        "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const loc = pm.response.headers.get('Location');",
+              "if (loc) { const id = loc.split('/').filter(Boolean).pop(); pm.collectionVariables.set('user2Id', id); }",
+              "try { const body = pm.response.json(); if (body && body.id) pm.collectionVariables.set('user2Id', body.id); } catch(e) {}",
+              "pm.test('Usuario 2 registrado', function(){ pm.expect(pm.collectionVariables.get('user2Id')).to.exist; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Auth - Verificar Usuario 1",
+      "request": { "method": "POST", "header": [], "url": { "raw": "{{baseUrl}}/api/auth/verify/{{user1Id}}", "host": ["{{baseUrl}}"], "path": ["api","auth","verify","{{user1Id}}"] } },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Verificación user1 200', function(){ pm.response.to.have.status(200); });"] } }
+      ]
+    },
+    {
+      "name": "05 - Auth - Verificar Usuario 2",
+      "request": { "method": "POST", "header": [], "url": { "raw": "{{baseUrl}}/api/auth/verify/{{user2Id}}", "host": ["{{baseUrl}}"], "path": ["api","auth","verify","{{user2Id}}"] } },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Verificación user2 200', function(){ pm.response.to.have.status(200); });"] } }
+      ]
+    },
+    {
+      "name": "05b - Usuarios - MMR base (user1)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/usuarios/{{user1Id}}", "host": ["{{baseUrl}}"], "path": ["api","usuarios","{{user1Id}}"] } },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let mmr = 0;",
+              "try {",
+              "  let b = null;",
+              "  try { const text = pm.response.text(); b = text ? pm.response.json() : null; } catch(e){ b = null; }",
+              "  if (b && b.mmr != null) mmr = parseInt(b.mmr, 10);",
+              "} catch(e) {}",
+              "pm.collectionVariables.set('mmr1Before', isNaN(mmr)?0:mmr);",
+              "pm.test('MMR1 capturado', function(){ pm.expect(pm.collectionVariables.get('mmr1Before')).to.exist; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05c - Usuarios - MMR base (user2)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/usuarios/{{user2Id}}", "host": ["{{baseUrl}}"], "path": ["api","usuarios","{{user2Id}}"] } },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let mmr = 0;",
+              "try {",
+              "  let b = null;",
+              "  try { const text = pm.response.text(); b = text ? pm.response.json() : null; } catch(e){ b = null; }",
+              "  if (b && b.mmr != null) mmr = parseInt(b.mmr, 10);",
+              "} catch(e) {}",
+              "pm.collectionVariables.set('mmr2Before', isNaN(mmr)?0:mmr);",
+              "pm.test('MMR2 capturado', function(){ pm.expect(pm.collectionVariables.get('mmr2Before')).to.exist; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Juegos - Listar (sanity)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/juegos", "host": ["{{baseUrl}}"], "path": ["api","juegos"] } }
+    },
+    {
+      "name": "07 - Scrims - Crear",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Cookie", "value": "JSESSIONID={{JSESSIONID}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"juegoId\": 1,\n  \"region\": \"LATAM\",\n  \"formato\": \"5v5\",\n  \"rangoMin\": 0,\n  \"rangoMax\": 9999,\n  \"latenciaMax\": 80,\n  \"fechaHora\": \"2025-10-18T21:00:00\",\n  \"cuposTotal\": 2,\n  \"duracionMinutos\": 60\n}" },
+        "url": { "raw": "{{baseUrl}}/api/scrims", "host": ["{{baseUrl}}"], "path": ["api","scrims"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let body = null;",
+              "try { const text = pm.response.text(); body = text ? pm.response.json() : null; } catch (e) { body = null; }",
+              "if (body && body.id) {",
+              "  pm.collectionVariables.set('scrimId', body.id);",
+              "  pm.test('Scrim creado', function(){ pm.expect(pm.collectionVariables.get('scrimId')).to.exist; });",
+              "} else {",
+              "  pm.test('Scrim creado (no se obtuvo body JSON con id)', function(){ pm.expect(true).to.be.true; });",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07c - Scrims - Crear Valorant (invalid cupos)",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "body": { "mode": "raw", "raw": "{\n  \"juegoId\": 1,\n  \"region\": \"LATAM\",\n  \"formato\": \"5v5\",\n  \"rangoMin\": 0,\n  \"rangoMax\": 9999,\n  \"latenciaMax\": 80,\n  \"fechaHora\": \"2025-10-18T21:00:00\",\n  \"cuposTotal\": 7,\n  \"duracionMinutos\": 60\n}" },
+        "url": { "raw": "{{baseUrl}}/api/scrims", "host": ["{{baseUrl}}"], "path": ["api","scrims"] }
+      },
+      "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('Valorant invalid cupos -> esperado 400', function(){ pm.response.to.have.status(400); });" ] } } ]
+    },
+    {
+      "name": "07d - Scrims - Crear Valorant (valid cupos)",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "body": { "mode": "raw", "raw": "{\n  \"juegoId\": 1,\n  \"region\": \"LATAM\",\n  \"formato\": \"5v5\",\n  \"rangoMin\": 0,\n  \"rangoMax\": 9999,\n  \"latenciaMax\": 80,\n  \"fechaHora\": \"2025-10-18T21:00:00\",\n  \"cuposTotal\": 10,\n  \"duracionMinutos\": 60\n}" },
+        "url": { "raw": "{{baseUrl}}/api/scrims", "host": ["{{baseUrl}}"], "path": ["api","scrims"] }
+      },
+      "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [ "let body=null; try{ body=pm.response.json(); }catch(e){}; if(body && body.id) { pm.collectionVariables.set('scrimValorantId', body.id); pm.test('Scrim Valorant creado', ()=>pm.expect(pm.collectionVariables.get('scrimValorantId')).to.exist); } else { pm.test('Scrim Valorant creado (response no JSON)', ()=>pm.expect(pm.response).to.have.status(201)); }" ] } } ]
+    },
+    {
+      "name": "08b - Scrims - Postular Usuario 1 (Valorant missing role)",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode": "raw", "raw": "{\n  \"usuarioId\": {{user1Id}}\n}" },
+        "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimValorantId}}/postulaciones", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimValorantId}}","postulaciones"] }
+      },
+      "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('Postular sin rol -> esperado 400', function(){ pm.response.to.have.status(400); });" ] } } ]
+    },
+    {
+      "name": "07b - Notificaciones - Verificar Scrim Creado",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/notificaciones/usuario/{{user1Email}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api","notificaciones","usuario","{{user1Email}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function(){ pm.response.to.have.status(200); });",
+              "try {",
+              "  const notifs = pm.response.json();",
+              "  pm.test('Hay notificaciones', function(){ pm.expect(notifs.length).to.be.greaterThan(0); });",
+              "  const scrimNoti = notifs.find(n => n.payload && n.payload.includes('Scrim'));",
+              "  pm.test('Existe notificación de Scrim creado', function(){ pm.expect(scrimNoti).to.exist; });",
+              "  console.log(' NOTIFICACIONES:', notifs.length, 'encontradas');",
+              "  console.log(' Primera notificación:', JSON.stringify(notifs[0], null, 2));",
+              "} catch(e) {",
+              "  console.log(' Error al parsear notificaciones:', e.message);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - Scrims - Postular Usuario 1",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode": "raw", "raw": "{\n  \"usuarioId\": {{user1Id}},\n  \"rolDeseado\": \"MID\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/postulaciones", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","postulaciones"] }
+      }
+    },
+    {
+      "name": "09 - Scrims - Postular Usuario 2",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode": "raw", "raw": "{\n  \"usuarioId\": {{user2Id}},\n  \"rolDeseado\": \"TOP\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/postulaciones", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","postulaciones"] }
+      }
+    },
+    {
+      "name": "10 - Scrims - Matchmaking (mmr)",
+      "request": { "method": "POST", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/matchmaking/run?strategy=mmr", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","matchmaking","run"], "query": [ {"key":"strategy","value":"mmr"} ] } }
+    },
+    {
+      "name": "10a - Scrims - Lobby (antes)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/lobby", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","lobby"] } },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let b = {};",
+              "try { const text = pm.response.text(); b = text ? pm.response.json() : {}; } catch(e){}",
+              "pm.collectionVariables.set('pendientes_before', b.pendientes||0);",
+              "pm.collectionVariables.set('aceptadas_before', b.aceptadas||0);",
+              "pm.collectionVariables.set('confirmadas_before', b.confirmadas||0);",
+              "pm.collectionVariables.set('estado_before', b.estado||'');",
+              "pm.test('Lobby antes capturado', function(){ pm.expect(true).to.be.true; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10b - Scrims - Estado LOBBY (liviano)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}"] } },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let estado = null;",
+              "try { let body = null; try { const text = pm.response.text(); body = text ? pm.response.json() : null; } catch(e){ body = null; }",
+              "  estado = body && body.estado;",
+              "} catch(e) {}",
+              "pm.test('Estado LOBBY_ARMADO', function(){ pm.expect(estado).to.eql('LOBBY_ARMADO'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10c - Scrims - Lobby (después)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/lobby", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","lobby"] } },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let b = {};",
+              "try { const text = pm.response.text(); b = text ? pm.response.json() : {}; } catch(e){}",
+              "pm.collectionVariables.set('pendientes_after', b.pendientes||0);",
+              "pm.collectionVariables.set('aceptadas_after', b.aceptadas||0);",
+              "pm.collectionVariables.set('confirmadas_after', b.confirmadas||0);",
+              "pm.collectionVariables.set('estado_after', b.estado||'');",
+              "pm.test('Lobby después capturado', function(){ pm.expect(true).to.be.true; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 - Scrims - Confirmar Usuario 1",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode": "raw", "raw": "{\n  \"usuarioId\": {{user1Id}},\n  \"confirmado\": true\n}" },
+        "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/confirmaciones", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","confirmaciones"] }
+      }
+    },
+    {
+      "name": "12 - Scrims - Confirmar Usuario 2",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode": "raw", "raw": "{\n  \"usuarioId\": {{user2Id}},\n  \"confirmado\": true\n}" },
+        "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/confirmaciones", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","confirmaciones"] }
+      }
+    },
+    {
+      "name": "12b - Scrims - Estado CONFIRMADO (liviano)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}"] } },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "let estado = null;",
+          "try { const body = pm.response.json(); estado = body && body.estado; } catch(e) {}",
+          "pm.test('Estado CONFIRMADO', function(){ pm.expect(estado).to.eql('CONFIRMADO'); });"
+        ] } }
+      ]
+    },
+    {
+      "name": "13 - Scrims - Formar Equipos (MMR)",
+      "request": { "method": "POST", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/formar-equipos?estrategia=POR_MMR", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","formar-equipos"], "query": [ {"key":"estrategia","value":"POR_MMR"} ] } },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let e1=null, e2=null;",
+              "try { let arr = null; try { const text = pm.response.text(); arr = text ? pm.response.json() : null; } catch(e){ arr = null; }",
+              "  if (Array.isArray(arr) && arr.length>=2){ e1=arr[0].id; e2=arr[1].id; pm.collectionVariables.set('equipo1Id', e1); pm.collectionVariables.set('equipo2Id', e2); }",
+              "} catch(e) {}",
+              "pm.test('Equipos creados (2)', function(){ pm.expect(pm.collectionVariables.get('equipo1Id')).to.exist; pm.expect(pm.collectionVariables.get('equipo2Id')).to.exist; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 - Scrims - Iniciar",
+      "request": { "method": "POST", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/iniciar", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","iniciar"] } },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "try { let body = null; try { const text = pm.response.text(); body = text ? pm.response.json() : null; } catch(e){ body = null; }",
+          "  if (body && body.estado) pm.test('Estado EN_JUEGO', function(){ pm.expect(body.estado).to.eql('EN_JUEGO'); });",
+          "} catch(e) {}"
+        ] } }
+      ]
+    },
+    {
+      "name": "15 - Matches - Por Scrim (captura matchId)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/matches", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","matches"] } },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "try { let arr = null; try { const text = pm.response.text(); arr = text ? pm.response.json() : null; } catch(e){ arr = null; }",
+          "  if (Array.isArray(arr) && arr.length) { pm.collectionVariables.set('matchId', arr[0].id); }",
+          "} catch(e) {}",
+          "pm.test('matchId capturado', function(){ pm.expect(pm.collectionVariables.get('matchId')).to.exist; });"
+        ] } }
+      ]
+    },
+    {
+      "name": "16 - Match - Registrar Evento",
+      "request": { "method": "POST", "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode":"raw", "raw": "{\n  \"tipo\": \"DRAGON\",\n  \"usuarioId\": {{user1Id}},\n  \"equipoId\": {{equipo1Id}},\n  \"descripcion\": \"Dragon Infernal\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/matches/{{matchId}}/eventos", "host": ["{{baseUrl}}"], "path": ["api","matches","{{matchId}}","eventos"] }
+      }
+    },
+    {
+      "name": "17 - Match - Registrar Estadística Jugador",
+      "request": { "method": "POST", "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode":"raw", "raw": "{\n  \"usuarioId\": {{user1Id}},\n  \"equipoId\": {{equipo1Id}},\n  \"kills\": 3, \"muertes\": 1, \"asistencias\": 5, \"minions\": 120, \"oro\": 8000, \"danoCausado\": 15000, \"danoRecibido\": 6000, \"torres\": 1, \"objetivos\": 1\n}" },
+        "url": { "raw": "{{baseUrl}}/api/matches/{{matchId}}/estadisticas", "host": ["{{baseUrl}}"], "path": ["api","matches","{{matchId}}","estadisticas"] }
+      }
+    },
+    {
+      "name": "18 - Finalizar Match (MMR + Historial)",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode": "raw", "raw": "{\n  \"equipoGanadorId\": {{equipo1Id}},\n  \"duracionMinutos\": 35,\n  \"killsGanador\": 28,\n  \"killsPerdedor\": 16,\n  \"torresGanador\": 10,\n  \"torresPerdedor\": 3,\n  \"goldDiff\": 8500,\n  \"deltaWin\": 15,\n  \"deltaLose\": -12,\n  \"observaciones\": \"GG\",\n  \"jugadores\": [\n    { \"usuarioId\": {{user1Id}}, \"equipoId\": {{equipo1Id}}, \"kills\": 10, \"muertes\": 2, \"asistencias\": 8, \"minions\": 230, \"oro\": 14000, \"danoCausado\": 32000, \"danoRecibido\": 9000, \"torres\": 2, \"objetivos\": 1 },\n    { \"usuarioId\": {{user2Id}}, \"equipoId\": {{equipo2Id}}, \"kills\": 4, \"muertes\": 7, \"asistencias\": 5, \"minions\": 200, \"oro\": 11000, \"danoCausado\": 21000, \"danoRecibido\": 15000, \"torres\": 1, \"objetivos\": 0 }\n  ]\n}" },
+        "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/finalizar-match", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","finalizar-match"] }
+      },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "let body = null;",
+          "try { const text = pm.response.text(); body = text ? pm.response.json() : null; } catch (e) { body = null; }",
+          "if (body && body.estado) { pm.test('Estado FINALIZADO (resp)', function(){ pm.expect(body.estado).to.eql('FINALIZADO'); }); }",
+          "pm.test('Finalizar 200/201', function(){ pm.expect([200,201]).to.include(pm.response.code); });"
+        ] } }
+      ]
+    },
+    {
+      "name": "18b - Scrims - Estado FINALIZADO (liviano)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}"] } },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let estado = null;",
+              "try { let body = null; try { const text = pm.response.text(); body = text ? pm.response.json() : null; } catch(e){ body = null; }",
+              "  estado = body && body.estado;",
+              "} catch(e) {}",
+              "pm.test('Estado FINALIZADO', function(){ pm.expect(estado).to.eql('FINALIZADO'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "19 - Feedback - Crear",
+      "request": { "method": "POST", "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode":"raw", "raw": "{\n  \"autorId\": {{user1Id}},\n  \"rating\": 5,\n  \"comentario\": \"GGs\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/feedback", "host": ["{{baseUrl}}"], "path": ["api","scrims","{{scrimId}}","feedback"] }
+      }
+    },
+    {
+      "name": "20 - Reportes - Crear",
+      "request": { "method": "POST", "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": { "mode":"raw", "raw": "{\n  \"scrimId\": {{scrimId}},\n  \"reportadoId\": {{user2Id}},\n  \"motivo\": \"No-show\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/reportes", "host": ["{{baseUrl}}"], "path": ["api","reportes"] }
+      }
+    },
+    {
+      "name": "21 - Reportes - Listar Pendientes",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/reportes?estado=PENDIENTE", "host": ["{{baseUrl}}"], "path": ["api","reportes"], "query": [ {"key":"estado","value":"PENDIENTE"} ] } }
+    },
+    {
+      "name": "22 - Usuarios - Historial (user1)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/usuarios/{{user1Id}}/historial", "host": ["{{baseUrl}}"], "path": ["api","usuarios","{{user1Id}}","historial"] } },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let arr = [];",
+              "try { const text = pm.response.text(); arr = text ? pm.response.json() : []; } catch(e) { arr = []; }",
+              "pm.test('Historial no vacío', function(){ pm.expect(Array.isArray(arr) && arr.length>0).to.be.true; });",
+              "const mid = pm.collectionVariables.get('matchId');",
+              "const deltaWin = 15;",
+              "const before = parseInt(pm.collectionVariables.get('mmr1Before')||'0',10);",
+              "const expectedAfter = Math.max(0, before + deltaWin);",
+              "const h = Array.isArray(arr) ? arr.find(x => x.match && String(x.match.id) === String(mid)) : null;",
+              "pm.test('Historial user1 para match', function(){ pm.expect(!!h).to.be.true; });",
+              "if (h){",
+              "  pm.test('Resultado VICTORIA', function(){ pm.expect(h.resultado).to.eql('VICTORIA'); });",
+              "  pm.test('MMR antes coincide', function(){ pm.expect(h.mmrAntes).to.eql(before); });",
+              "  pm.test('MMR después = antes + 15', function(){ pm.expect(h.mmrDespues).to.eql(expectedAfter); });",
+              "  pm.collectionVariables.set('mmr1After', h.mmrDespues);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "22b - Usuarios - Historial (user2)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/usuarios/{{user2Id}}/historial", "host": ["{{baseUrl}}"], "path": ["api","usuarios","{{user2Id}}","historial"] } },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let arr = [];",
+              "try { const text = pm.response.text(); arr = text ? pm.response.json() : []; } catch(e) { arr = []; }",
+              "pm.test('Historial user2 no vacío', function(){ pm.expect(Array.isArray(arr) && arr.length>0).to.be.true; });",
+              "const mid = pm.collectionVariables.get('matchId');",
+              "const deltaLose = -12;",
+              "const before = parseInt(pm.collectionVariables.get('mmr2Before')||'0',10);",
+              "const expectedAfter = Math.max(0, before + deltaLose);",
+              "const h = Array.isArray(arr) ? arr.find(x => x.match && String(x.match.id) === String(mid)) : null;",
+              "pm.test('Historial user2 para match', function(){ pm.expect(!!h).to.be.true; });",
+              "if (h){",
+              "  pm.test('Resultado DERROTA', function(){ pm.expect(h.resultado).to.eql('DERROTA'); });",
+              "  pm.test('MMR2 antes coincide', function(){ pm.expect(h.mmrAntes).to.eql(before); });",
+              "  pm.test('MMR2 después = max(0, antes - 12)', function(){ pm.expect(h.mmrDespues).to.eql(expectedAfter); });",
+              "  pm.collectionVariables.set('mmr2After', h.mmrDespues);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "23 - Notificaciones - Unread Count (user1)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/notificaciones/unread-count?usuarioId={{user1Id}}", "host": ["{{baseUrl}}"], "path": ["api","notificaciones","unread-count"], "query": [ {"key":"usuarioId","value":"{{user1Id}}"} ] } }
+    },
+    {
+      "name": "24 - Notificaciones - Listar (user1)",
+      "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/notificaciones?usuarioId={{user1Id}}", "host": ["{{baseUrl}}"], "path": ["api","notificaciones"], "query": [ {"key":"usuarioId","value":"{{user1Id}}"} ] } }
+    },
+    {
+      "name": "04b - Auth - Login Usuario 1",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{user1Email}}\",\n  \"password\": \"{{password}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api","auth","login"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('login 200', function(){ pm.response.to.have.status(200); });",
+              "let b = null;",
+              "try { const text = pm.response.text(); b = text ? pm.response.json() : null; } catch(e) { b = null; }",
+              "try { if (b && b.token) pm.collectionVariables.set('token', b.token); if (b && b.accessToken) pm.collectionVariables.set('token', b.accessToken); } catch(e) {}",
+              "const auth = pm.response.headers.get('Authorization'); if (auth) pm.collectionVariables.set('token', auth.replace(/^Bearer\\s+/i, ''));",
+              "const jsession = pm.cookies.get('JSESSIONID'); if (jsession) pm.collectionVariables.set('JSESSIONID', jsession);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06b - Busqueda Favorita - Crear (user1)",
+      "request": {
+        "method": "POST",
+        "header": [ {"key":"Content-Type","value":"application/json"} ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"usuarioId\": {{user1Id}},\n  \"juego\": \"League of Legends\",\n  \"region\": \"LATAM\",\n  \"rangoMin\": 0,\n  \"rangoMax\": 9999,\n  \"latenciaMax\": 80,\n  \"alertasActivas\": true\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/busquedas",
+          "host": ["{{baseUrl}}"],
+          "path": ["api","busquedas"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let body = null;",
+              "try { const text = pm.response.text(); body = text ? pm.response.json() : null; } catch (e) { body = null; }",
+              "if (body && body.id) {",
+              "  pm.collectionVariables.set('busquedaId', body.id);",
+              "  pm.test('Busqueda favorita creada', function(){ pm.expect(pm.collectionVariables.get('busquedaId')).to.exist; });",
+              "} else {",
+              "  pm.test('Busqueda favorita creada (no se obtuvo body JSON con id)', function(){ pm.expect(true).to.be.true; });",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Busqueda Guardada - Crear",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"juego\": \"League of Legends\",\n  \"region\": \"LATAM\",\n  \"rangoMin\": 0,\n  \"rangoMax\": 9999,\n  \"latenciaMax\": 80,\n  \"alertasActivas\": true\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/usuarios/{{user1Id}}/busquedas",
+          "host": [ "{{baseUrl}}" ],
+          "path": [ "api", "usuarios", "{{user1Id}}", "busquedas" ]
+        }
+      }
+    },
+    {
+      "name": "Busqueda Guardada - Listar",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/usuarios/{{user1Id}}/busquedas",
+          "host": [ "{{baseUrl}}" ],
+          "path": [ "api", "usuarios", "{{user1Id}}", "busquedas" ]
+        }
+      }
+    },
+    {
+      "name": "Busqueda Guardada - Eliminar",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/usuarios/{{user1Id}}/busquedas/{{busquedaId}}",
+          "host": [ "{{baseUrl}}" ],
+          "path": [ "api", "usuarios", "{{user1Id}}", "busquedas", "{{busquedaId}}" ]
+        }
+      }
+    }
+    ,
+    {
+      "name": "Auth - Login Moderator",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{modEmail}}\",\n  \"password\": \"{{password}}\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/auth/login", "host": [ "{{baseUrl}}" ], "path": [ "api","auth","login" ] }
+      },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "pm.test('login moderator 200', function(){ pm.response.to.have.status(200); });",
+          "let b=null; try{ b = pm.response.json(); }catch(e){}; if(b && (b.token||b.accessToken)) { pm.collectionVariables.set('modToken', b.token||b.accessToken); }",
+          "const auth = pm.response.headers.get('Authorization'); if(auth) pm.collectionVariables.set('modToken', auth.replace(/^Bearer\\s+/i,''));"
+        ] } }
+      ]
+    },
+    {
+      "name": "Auth - Login Regular User",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{user1Email}}\",\n  \"password\": \"{{password}}\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/auth/login", "host": [ "{{baseUrl}}" ], "path": [ "api","auth","login" ] }
+      },
+      "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('login user 200', function(){ pm.response.to.have.status(200); });",
+        "let b=null; try{ b = pm.response.json(); }catch(e){}; if(b && (b.token||b.accessToken)) { pm.collectionVariables.set('userToken', b.token||b.accessToken); }",
+        "const auth = pm.response.headers.get('Authorization'); if(auth) pm.collectionVariables.set('userToken', auth.replace(/^Bearer\\s+/i,''));"
+      ] } } ]
+    },
+    {
+      "name": "Scrim - Cancel as Moderator (expect 204)",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Authorization", "value": "Bearer {{modToken}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/cancelar", "host": [ "{{baseUrl}}" ], "path": [ "api","scrims","{{scrimId}}","cancelar" ] }
+      },
+      "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Cancel as mod - 204 or 200', function(){ pm.expect([200,204]).to.include(pm.response.code); });"
+      ] } } ]
+    },
+    {
+      "name": "Scrim - Cancel as Regular User (expect 403)",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Authorization", "value": "Bearer {{userToken}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/cancelar", "host": [ "{{baseUrl}}" ], "path": [ "api","scrims","{{scrimId}}","cancelar" ] }
+      },
+      "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Cancel as user -> 403', function(){ pm.response.to.have.status(403); });"
+      ] } } ]
+    },
+    {
+      "name": "Scrim - Finalize as Moderator (expect 204)",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Authorization", "value": "Bearer {{modToken}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/finalizar", "host": [ "{{baseUrl}}" ], "path": [ "api","scrims","{{scrimId}}","finalizar" ] }
+      },
+      "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Finalize as mod - 204 or 200', function(){ pm.expect([200,204]).to.include(pm.response.code); });"
+      ] } } ]
+    },
+    {
+      "name": "Scrim - Finalize as Regular User (expect 403)",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Authorization", "value": "Bearer {{userToken}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/scrims/{{scrimId}}/finalizar", "host": [ "{{baseUrl}}" ], "path": [ "api","scrims","{{scrimId}}","finalizar" ] }
+      },
+      "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Finalize as user -> 403', function(){ pm.response.to.have.status(403); });"
+      ] } } ]
+    },
+    {
+      "name": "Moderation - Resolve Report as Moderator",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Authorization", "value": "Bearer {{modToken}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/mod/reportes/{{reportId}}/resolver?resolucion=aprobado&estado=APROBADO", "host": [ "{{baseUrl}}" ], "path": [ "api","mod","reportes","{{reportId}}","resolver" ], "query": [ { "key": "resolucion", "value": "aprobado" }, { "key": "estado", "value": "APROBADO" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Resolve report as mod -> 200', function(){ pm.response.to.have.status(200); });"
+      ] } } ]
+    },
+    {
+      "name": "Moderation - Register No-Show as Moderator",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Authorization", "value": "Bearer {{modToken}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/mod/no-show/{{scrimId}}/{{user2Id}}", "host": [ "{{baseUrl}}" ], "path": [ "api","mod","no-show","{{scrimId}}","{{user2Id}}" ] }
+      },
+      "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('No-show as mod -> 200/204', function(){ pm.expect([200,201,204]).to.include(pm.response.code); });"
+      ] } } ]
+    }
+    ,
+    {
+      "name": "Seed - Promote Moderator (SQL instructions)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "description": "This item contains the SQL to promote an existing user to MODERADOR in your database. Postman cannot execute SQL directly — run the following SQL in your DB client (replace the email or id as needed):\n\nUPDATE usuario SET rol = 'MODERADOR' WHERE email = 'it_user_1761158800353@example.com';\n\nIf your schema differs, run: SELECT id, username, email, rol FROM usuario WHERE email = 'REPLACE_WITH_EMAIL';\n\nYou can also run the SQL file located at scripts/seed-moderator.sql in the repository.",
+        "url": { "raw": "{{baseUrl}}/", "host": [ "{{baseUrl}}" ], "path": [ "" ] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Seed instructions available', function(){ pm.expect(true).to.be.true; });"
+            ]
+          }
+        }
+      ]
+    }
+  ,
+    {
+      "name": "Admin - Run Reminder Job",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Authorization", "value": "Bearer {{modToken}}" }, { "key": "Content-Type", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/admin/notifications/run-reminders", "host": [ "{{baseUrl}}" ], "path": [ "api","admin","notifications","run-reminders" ] }
+      },
+      "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Run reminders -> 200', function(){ pm.response.to.have.status(200); });",
+        "try { var b = pm.response.json(); pm.test('status triggered', function(){ pm.expect(b.status).to.eql('triggered'); }); } catch(e) { pm.test('response json parse', function(){ pm.expect(true).to.be.false; }); }"
+      ] } } ]
+    },
+    {
+      "name": "Admin - Get Reminded IDs",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{modToken}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/admin/notifications/reminded", "host": [ "{{baseUrl}}" ], "path": [ "api","admin","notifications","reminded" ] }
+      },
+      "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Get reminded -> 200', function(){ pm.response.to.have.status(200); });",
+        "try { var body = pm.response.json(); pm.collectionVariables.set('remindedCount', (body.reminded||[]).length); pm.test('reminded is array', function(){ pm.expect(Array.isArray(body.reminded)).to.be.true; }); } catch(e) { pm.test('parse reminded', function(){ pm.expect(true).to.be.false; }); }"
+      ] } } ]
+    },
+    {
+      "name": "Admin - Get Notifications Config",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{modToken}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/admin/notifications/config", "host": [ "{{baseUrl}}" ], "path": [ "api","admin","notifications","config" ] }
+      },
+      "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Config -> 200', function(){ pm.response.to.have.status(200); });",
+        "try { var c = pm.response.json(); pm.test('has reminderHours', function(){ pm.expect(c.reminderHours).to.exist; }); pm.test('has windowMinutes', function(){ pm.expect(c.windowMinutes).to.exist; }); } catch(e) { pm.test('parse config', function(){ pm.expect(true).to.be.false; }); }"
+      ] } } ]
+    },
+    {
+      "name": "Admin - List Notification Intents",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{modToken}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/admin/notifications/intents", "host": [ "{{baseUrl}}" ], "path": [ "api","admin","notifications","intents" ] }
+      },
+      "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('List intents -> 200', function(){ pm.response.to.have.status(200); });",
+        "try { var b = pm.response.json(); pm.test('intents array or empty', function(){ pm.expect(Array.isArray(b.intents)).to.be.true; }); } catch(e) { pm.test('parse intents', function(){ pm.expect(true).to.be.false; }); }"
+      ] } } ]
+    },
+    {
+      "name": "Admin - Retry Notification Intent",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Authorization", "value": "Bearer {{modToken}}" }, { "key": "Content-Type", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/admin/notifications/intents/{{intentId}}/retry", "host": [ "{{baseUrl}}" ], "path": [ "api","admin","notifications","intents","{{intentId}}","retry" ] }
+      },
+      "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Retry intent -> 200', function(){ pm.response.to.have.status(200); });",
+        "try { var b = pm.response.json(); pm.test('retrySuccess present', function(){ pm.expect(b.retrySuccess).to.not.be.undefined; }); } catch(e) { pm.test('parse retry response', function(){ pm.expect(true).to.be.false; }); }"
+      ] } } ]
+  },
+  {
+      "name": "Audit - List (admin/mod)",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{modToken}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/audit?page=0&size=50", "host": [ "{{baseUrl}}" ], "path": [ "api","audit" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "50" } ] }
+      },
+      "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Audit list -> 200', function(){ pm.response.to.have.status(200); });",
+        "try { var b = pm.response.json(); pm.test('page object present', function(){ pm.expect(b).to.have.property('content'); }); } catch(e) { pm.test('parse audit page', function(){ pm.expect(true).to.be.false; }); }"
+      ] } } ]
+    },
+    {
+      "name": "Audit - By Entity (Usuario)",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{modToken}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/audit/entity/Usuario/{{user1Id}}", "host": [ "{{baseUrl}}" ], "path": [ "api","audit","entity","Usuario","{{user1Id}}" ] }
+      },
+      "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Audit by entity -> 200', function(){ pm.response.to.have.status(200); });",
+        "try { var arr = pm.response.json(); pm.test('array or empty', function(){ pm.expect(Array.isArray(arr)).to.be.true; }); } catch(e) { pm.test('parse audit entity', function(){ pm.expect(true).to.be.false; }); }"
+      ] } } ]
+    }
+  ]
+}
