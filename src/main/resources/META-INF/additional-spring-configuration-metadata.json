@@ -1,0 +1,44 @@
+{
+  "properties": [
+    {
+      "name": "app.notifications.email.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable email notifications"
+    },
+    {
+      "name": "app.notifications.push.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable push notifications"
+    },
+    {
+      "name": "app.notifications.discord.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable Discord notifications"
+    },
+    {
+      "name": "app.ratelimit.capacity",
+      "type": "java.lang.Integer",
+      "description": "Rate limit capacity per window"
+    },
+    {
+      "name": "app.ratelimit.periodSeconds",
+      "type": "java.lang.Integer",
+      "description": "Rate limit window length in seconds"
+    },
+    {
+      "name": "app.ratelimit.keyStrategy",
+      "type": "java.lang.String",
+      "description": "Keying strategy: ip or user",
+      "sourceType": "com.uade.TrabajoPracticoProcesoDesarrollo.security.filter.RateLimitFilter",
+      "values": [
+        { "value": "ip" },
+        { "value": "user" }
+      ]
+    },
+    {
+      "name": "spring.mail.from",
+      "type": "java.lang.String",
+      "description": "Custom from-address used by notifications"
+    }
+  ]
+}
